@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',  # Пробуем
     'rest_framework_simplejwt.token_blacklist',
+    'django_filters',
     'djoser',
     # 'django_filters',
     'technol_parts_apps',

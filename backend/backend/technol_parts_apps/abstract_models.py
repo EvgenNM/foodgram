@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 import technol_parts_apps.constants as const
-from .models import Recipe
+# from .models import Recipe
 
 
 User = get_user_model()
@@ -23,12 +23,13 @@ class NameFieldModelBase(models.Model):
 
 
 class FavoriteAndShoppingListModel(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='favourites'
-    )
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='recipes'
-    )
+    pass
+    # user = models.ForeignKey(
+    #     User, on_delete=models.CASCADE, related_name='favourites'
+    # )
+    # recipe = models.ForeignKey(
+    #     Recipe, on_delete=models.CASCADE, related_name='recipes'
+    # )
 
-    class Meta:
-        abstract = True
+    # class Meta:
+    #     abstract = True

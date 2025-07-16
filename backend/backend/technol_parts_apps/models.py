@@ -1,7 +1,11 @@
+from datetime import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
 
-from .abstract_models import NameFieldModelBase, FavoriteAndShoppingListModel
+from .abstract_models import (
+    NameFieldModelBase,
+    # FavoriteAndShoppingListModel
+    )
 import technol_parts_apps.constants as const
 
 User = get_user_model()
@@ -14,11 +18,11 @@ class Recipe(NameFieldModelBase):
         upload_to='recipes/', null=True, blank=True)
     pub_date = models.DateTimeField(
         verbose_name='Дата публикации',
-        auto_now_add=True
+        auto_now_add=True,
     )
     description = models.TextField()
     cooking_time = models.PositiveIntegerField(
-        verbose_name='Оценка отзыва',
+        verbose_name='Время готовки',
     )
     ingredients = models.ManyToManyField(
         'Ingredient', through='RecipeIngredient'
@@ -33,9 +37,9 @@ class Recipe(NameFieldModelBase):
 
 
 class Ingredient(NameFieldModelBase):
-    unit = models.CharField(
-        verbose_name='Название',
-        max_length=const.MAX_LENGTH_NAME_UNIT
+    measurement_unit = models.CharField(
+        verbose_name='единица измерения',
+        max_length=const.MAX_LENGTH_NAME_UNIT,
     )
 
     class Meta:
@@ -45,7 +49,6 @@ class Ingredient(NameFieldModelBase):
 
 
 class Tag(NameFieldModelBase):
-
     slug = models.SlugField(
         verbose_name='Slug',
         max_length=const.MAX_LENGTH_SLUG,
@@ -55,7 +58,7 @@ class Tag(NameFieldModelBase):
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
-        ordering = ('name',)
+        ordering = ('name', )
 
 
 class RecipeIngredient(models.Model):
@@ -64,6 +67,10 @@ class RecipeIngredient(models.Model):
     count = models.PositiveIntegerField(
         verbose_name='Количественный показатель ингридиента',
     )
+
+    class Meta:
+        verbose_name = 'Количество ингридиентов'
+        verbose_name_plural = 'Количество ингридиентов'
 
     def __str__(self):
         return (
@@ -80,15 +87,31 @@ class Follow(models.Model):
         User, on_delete=models.CASCADE, related_name='followings'
     )
 
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
 
-class Favorite(FavoriteAndShoppingListModel):
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favourites'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='recipes'
+    )
 
     class Meta:
         verbose_name = 'Лист избранного'
         verbose_name_plural = 'Листы избранного'
 
 
-class Shopping(FavoriteAndShoppingListModel):
+class Shopping(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='shoppings'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='recipe_shops'
+    )
 
     class Meta:
         verbose_name = 'Лист покупок'
