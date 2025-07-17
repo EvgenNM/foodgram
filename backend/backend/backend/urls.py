@@ -4,8 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns_v1 = [
-    path('', include('users.urls')),
     path('', include('technol_parts_apps.urls')),
+    path('', include('users.urls')),
 ]
 
 

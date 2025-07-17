@@ -4,8 +4,17 @@ from .models import (
     Favorite, Follow, Ingredient, Recipe, RecipeIngredient, Shopping, Tag
 )
 
+
+class RecipeIngredientInline(admin.StackedInline):
+    model = RecipeIngredient
+    extra = 0
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
+    inlines = (
+        RecipeIngredientInline,
+    )
     list_display = (
         'name',
         'author',
@@ -20,8 +29,13 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_ingredient(self, instance):
         return [
-            one_ingredient.name for one_ingredient in instance.ingredient.all()
+            one_ingredient.ingredient
+            for one_ingredient in instance.recipes_ingredient.all()
         ]
+
+    get_ingredient.short_description = 'Ингредиенты'
+
+    # filter_horizontal = ('ingredients', )
 
 
 admin.site.register(Favorite)

@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import SAFE_METHODS
-
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -16,6 +16,8 @@ from .serializers import (
     CreateTokenSerializer,
     AddAvatarSerializer,
 )
+from technol_parts_apps.models import Follow
+from technol_parts_apps.serializers import FollowSerializer
 
 
 class AddAvatarView(APIView):
@@ -83,7 +85,7 @@ class Logout(APIView):
 class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента пользователями для админа."""
     queryset = User.objects.all()
-    http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post', 'delete']
     # filter_backends = (filters.SearchFilter,)
 
     def get_serializer_class(self):
@@ -92,7 +94,9 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
         return UserProfileSerializer
 
     def get_permissions(self):
-        if self.action == 'get_user_self':
+        if self.action in (
+            'get_user_self', 'doing_subscribe', 'list_subscribe'
+        ):
             return (permissions.IsAuthenticated(),)
         # if self.action == 'list':
         #     return (permissions.IsAdminUser(), )
@@ -110,3 +114,46 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(
+            detail=True,
+            url_path='subscribe',
+            methods=['POST', 'DELETE'],
+    )
+    def doing_subscribe(self, request, pk=None):
+
+        def get_data_context_serializer():
+            return FollowSerializer(
+                data=request.data,
+                context={'request': request}
+            )
+
+        if request.method == 'POST':
+            serializer = get_data_context_serializer()
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+        if request.method == 'DELETE':
+            serializer = get_data_context_serializer()
+            serializer.is_valid()
+            instance = get_object_or_404(
+                Follow,
+                user=self.request.user,
+                following=serializer.data['following']
+            )
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+            detail=False,
+            url_path='subscribe',
+            methods=['GET'],
+    )
+    def list_subscribe(self, request):
+        if request.method in SAFE_METHODS:
+            serializer = FollowSerializer(
+                data=request.user.follower.all(), many=True
+            )
+            serializer.is_valid()
+            return Response(serializer.data)

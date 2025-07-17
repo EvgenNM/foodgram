@@ -12,7 +12,8 @@ class NameFieldModelBase(models.Model):
     """Абстрактный класс для моделей."""
     name = models.CharField(
         verbose_name='Название',
-        max_length=const.MAX_LENGTH_NAME
+        max_length=const.MAX_LENGTH_NAME,
+        unique=True
     )
 
     class Meta:
