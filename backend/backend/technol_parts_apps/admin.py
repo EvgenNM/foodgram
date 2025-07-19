@@ -1,7 +1,8 @@
 from django.contrib import admin
 
 from .models import (
-    Favorite, Follow, Ingredient, Recipe, RecipeIngredient, Shopping, Tag
+    Favorite, Follow, Ingredient, Recipe,
+    RecipeIngredient, Shopping, Tag, RecipeTag,
 )
 
 
@@ -10,10 +11,14 @@ class RecipeIngredientInline(admin.StackedInline):
     extra = 0
 
 
+class RecipeTagInline(admin.StackedInline):
+    model = RecipeTag
+    extra = 0
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     inlines = (
-        RecipeIngredientInline,
+        RecipeIngredientInline, RecipeTagInline
     )
     list_display = (
         'name',
@@ -23,7 +28,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'description',
         # 'ingredients',
         'cooking_time',
-        'tag',
+        # 'tag',
         'get_ingredient'
     )
 
@@ -42,5 +47,7 @@ admin.site.register(Favorite)
 admin.site.register(Follow)
 admin.site.register(Ingredient)
 admin.site.register(RecipeIngredient)
+admin.site.register(RecipeTag)
 admin.site.register(Shopping)
 admin.site.register(Tag)
+#RecipeTag

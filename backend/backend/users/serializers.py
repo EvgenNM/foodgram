@@ -114,6 +114,7 @@ class AbstractUserSerializer(FieldsUsernamePasswordSerializers):
         validators=[vd.validator_password]
     )
 
+
 class UserCreateSerializer(AbstractUserSerializer):
 
     class Meta:
@@ -161,4 +162,3 @@ class AddAvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar', )
-        

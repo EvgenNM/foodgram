@@ -11,6 +11,27 @@ import technol_parts_apps.constants as const
 User = get_user_model()
 
 
+# class Tag(models.Model):
+#     name = models.CharField(
+#         verbose_name='Название',
+#         max_length=const.MAX_LENGTH_NAME,
+#         unique=True
+#     )
+#     slug = models.SlugField(
+#         verbose_name='Slug',
+#         max_length=const.MAX_LENGTH_SLUG,
+#         unique=True
+#     )
+
+#     class Meta:
+#         verbose_name = 'Тег'
+#         verbose_name_plural = 'Теги'
+#         ordering = ('name', )
+
+#     def __str__(self):
+#         return self.name[:const.LENGTH_TEXT]
+
+
 class Recipe(NameFieldModelBase):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='recipes')
@@ -25,10 +46,10 @@ class Recipe(NameFieldModelBase):
         verbose_name='Время готовки',
     )
     ingredients = models.ManyToManyField(
-        'Ingredient', through='RecipeIngredient'
+        'Ingredient', through='RecipeIngredient', null=True, blank=True
     )
-    tag = models.ForeignKey(
-        'Tag', on_delete=models.CASCADE, related_name='tags')
+    tag = models.ManyToManyField(
+        'Tag', through='RecipeTag', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Рецепт'
@@ -62,6 +83,15 @@ class Tag(NameFieldModelBase):
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
         ordering = ('name', )
+
+
+class RecipeTag(models.Model):
+    tag = models.ForeignKey(
+        Tag, on_delete=models.CASCADE, related_name='tag_recipes'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='recipe_tags'
+    )
 
 
 class RecipeIngredient(models.Model):

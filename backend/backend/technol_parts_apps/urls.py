@@ -6,16 +6,13 @@ from .views import (
     FollowViewSet,
     TagViewSet,
     Ingredient,
+    RecipeViewSet
 )
 
 router = routers.DefaultRouter()
 router.register('tags', TagViewSet, basename='genres')
 router.register('ingredients', Ingredient, basename='ingredients')
-# router.register(
-#     r'users/(?P<user_id>\d+)/subscribe',
-#     FollowViewSet,
-#     basename='followdoing'
-# )
+router.register('recipes', RecipeViewSet)
 
 urlpatterns = [
     path('', include(router.urls))

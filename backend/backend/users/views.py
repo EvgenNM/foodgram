@@ -102,6 +102,8 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
         #     return (permissions.IsAdminUser(), )
         return (permissions.AllowAny(), )
 
+    # Исключить удаление пользователя!!!!!!!!!!!!!!!
+
     @action(
         detail=False,
         url_path='me',

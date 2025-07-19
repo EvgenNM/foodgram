@@ -10,12 +10,13 @@ from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # from .permissions import IsAdmin, IsUser
-from .models import Tag, Ingredient
+from .models import Tag, Ingredient, Recipe
 from .serializers import (
     User,
     FollowSerializer,
     TagSerializers,
-    IngredientSerializers
+    IngredientSerializers,
+    CreateRecipeSerializer,
 )
 
 
@@ -39,6 +40,14 @@ class Ingredient(
     serializer_class = IngredientSerializers
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    """Создание манипуляционного инструмента для рецепта"""
+    queryset = Recipe.objects.all()
+    http_method_names = ['post']
+    serializer_class = CreateRecipeSerializer
+    # permission_classes = [permissions.IsAuthenticated]
 
 
 class FollowViewSet(
