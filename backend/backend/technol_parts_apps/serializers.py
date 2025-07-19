@@ -91,22 +91,27 @@ class Base64ImageField(serializers.ImageField):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id_ingredient = serializers.PrimaryKeyRelatedField(
-        queryset=Ingredient.objects.all(), source='ingredient'
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(),
     )
     amount = serializers.IntegerField(
-        source='count',
         validators=[
             MinValueValidator(
                 1,
                 message='Количество ингредиента не может быть меньше единицы'
             )
-        ]
+        ],
+        write_only=True
     )
 
     class Meta:
-        model = RecipeIngredient
-        fields = ('id_ingredient', 'amount', )
+        model = Ingredient
+        fields = ('id', 'amount', )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['amount'] = instance.ingredient_recipes.last().amount
+        return representation
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
@@ -132,18 +137,28 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         many=True,
         source='tag',
     )
+    ingredients = RecipeIngredientSerializer(
+        many=True
+    )
 
     class Meta:
         model = Recipe
         fields = [
-            'image', 'name', 'text', 'cooking_time', 'tags'
+            'image', 'name', 'text', 'cooking_time', 'tags', 'ingredients'
         ]
 
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
         tags = validated_data.pop('tag')
+        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
         for tag in tags:
             tag_object = get_object_or_404(Tag, pk=tag.id)
             RecipeTag.objects.create(recipe=recipe, tag=tag_object)
+        for values in ingredients:
+            RecipeIngredient.objects.create(
+                ingredient=values['id'],
+                recipe=recipe,
+                amount=values['amount']
+            )
         return recipe
