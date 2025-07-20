@@ -107,6 +107,11 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveIntegerField(
         verbose_name='Количественный показатель ингридиента',
     )
+    date = models.DateTimeField(
+        verbose_name='Дата изменения',
+        auto_now=True,
+        null=True, blank=True,
+    )
 
     class Meta:
         verbose_name = 'Количество ингридиентов'

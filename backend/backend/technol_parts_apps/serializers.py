@@ -127,11 +127,13 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 1,
                 message='Время готовки не может быть меньше 1 минуты'
             )
-        ]
+        ],
+        required=True,
     )
     text = serializers.CharField(
         source='description',
-        max_length=const.TEXT_LENGTH
+        max_length=const.TEXT_LENGTH,
+        required=True,
     )
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(),
@@ -163,6 +165,58 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 amount=values['amount']
             )
         return recipe
+
+
+class RecipeUpdateIngredientSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(),
+    )
+    amount = serializers.IntegerField(
+        validators=[
+            MinValueValidator(
+                1,
+                message='Количество ингредиента не может быть меньше единицы'
+            )
+        ],
+        write_only=True
+    )
+
+    class Meta:
+        model = Ingredient
+        fields = ('id', 'amount', )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['amount'] = RecipeIngredient.objects.filter(
+            ingredient=instance).order_by('date').last().amount
+        return representation
+
+
+class UpdateRecipeSerializer(CreateRecipeSerializer):
+    image = Base64ImageField(required=False)
+    ingredients = RecipeUpdateIngredientSerializer(
+        many=True
+    )
+
+    def update(self, instance, validated_data):
+        instance.image = validated_data.get('image', instance.image)
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text')
+        instance.cooking_time = validated_data.get('cooking_time')
+        tags = validated_data.pop('tag')
+        ingredients = validated_data.pop('ingredients')
+        instance.save()
+        for tag in tags:
+            tag_object = get_object_or_404(Tag, pk=tag.id)
+            RecipeTag.objects.get_or_create(recipe=instance, tag=tag_object)
+        for values in ingredients:
+            ingredient, status = RecipeIngredient.objects.get_or_create(
+                ingredient=values['id'],
+                recipe=instance
+            )
+            ingredient.amount = values['amount']
+            ingredient.save()
+        return instance
 
 
 class UserSerializer(AbstractUserSerializer):
@@ -213,3 +267,25 @@ class GetRetrieveRecipeSerializer(serializers.ModelSerializer):
             recipe__exact=instance
         ).exists()
         return representation
+
+
+class GetLinkSerializer(serializers.ModelSerializer):
+    short_link = serializers.HyperlinkedRelatedField(
+        read_only=True,
+        view_name='recipes-detail',
+        lookup_url_kwarg='pk',
+        source='id'
+    )
+    # author = serializers.HyperlinkedRelatedField(
+    #     read_only=True,
+    #     view_name='recipes-detail',
+    #     lookup_field='pk',
+    # )
+
+    class Meta:
+        model = Recipe
+        fields = ('short_link', )
+        # fields = ['short-link', 'short_link']
+        # extra_kwargs = {
+        #     'short-link': {'source': 'short_link'},
+        # }

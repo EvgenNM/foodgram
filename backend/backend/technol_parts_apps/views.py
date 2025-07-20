@@ -17,7 +17,9 @@ from .serializers import (
     TagSerializers,
     IngredientSerializers,
     CreateRecipeSerializer,
-    GetRetrieveRecipeSerializer
+    GetRetrieveRecipeSerializer,
+    UpdateRecipeSerializer,
+    GetLinkSerializer
 )
 
 
@@ -46,16 +48,29 @@ class Ingredient(
 class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
     queryset = Recipe.objects.all()
-    http_method_names = ['post', 'get']
-    serializer_class = CreateRecipeSerializer
+    http_method_names = ['post', 'get', 'patch', 'delete']
     # permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == 'create':
             return CreateRecipeSerializer
-        if self.action in ('list', 'retrieve'):
-            return GetRetrieveRecipeSerializer
-        return CreateRecipeSerializer
+        if self.action == 'partial_update':
+            return UpdateRecipeSerializer
+        return GetRetrieveRecipeSerializer
+
+    @action(
+            detail=True,
+            url_path='get-link',
+            methods=['GET'],
+    )
+    def get_link(self, request, pk=None):
+
+        if request.method in SAFE_METHODS:
+            serializer = GetLinkSerializer(
+                instance=self.get_object(),
+                context={'request': request}
+            )
+            return Response(serializer.data)
 
 
 class FollowViewSet(
