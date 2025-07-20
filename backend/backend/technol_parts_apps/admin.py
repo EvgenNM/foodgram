@@ -21,6 +21,7 @@ class RecipeAdmin(admin.ModelAdmin):
         RecipeIngredientInline, RecipeTagInline
     )
     list_display = (
+        'id',
         'name',
         'author',
         'image',

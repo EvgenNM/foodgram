@@ -13,6 +13,7 @@ from django.core.files.base import ContentFile
 from .models import (
     Follow, Tag, Ingredient, Recipe, RecipeIngredient, RecipeTag
 )
+from users.serializers import AbstractUserSerializer
 
 
 User = get_user_model()
@@ -162,3 +163,53 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 amount=values['amount']
             )
         return recipe
+
+
+class UserSerializer(AbstractUserSerializer):
+
+    class Meta:
+        model = User
+        fields = (
+            'email', 'id', 'username', 'first_name', 'last_name', 'avatar'
+        )
+        read_only_fields = (
+            'email', 'id', 'username', 'first_name', 'last_name', 'avatar'
+        )
+
+
+class GetRetrieveRecipeSerializer(serializers.ModelSerializer):
+    tags = TagSerializers(many=True, source='tag')
+    author = UserSerializer()
+    ingredients = IngredientSerializers(many=True)
+    text = serializers.CharField(source='description')
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id', 'tags', 'author', 'ingredients', 'name',
+            'image', 'text', 'cooking_time'
+        )
+        read_only_fields = (
+            'id', 'tags', 'author', 'ingredients', 'name',
+            'image', 'text', 'cooking_time'
+        )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        user = self.context['request'].user
+        if representation['ingredients']:
+            for ingredient in representation['ingredients']:
+                ingredient['amount'] = RecipeIngredient.objects.get(
+                    recipe__id=instance.id,
+                    ingredient__id=int(ingredient['id'])).amount
+        if representation['author']:
+            representation['author']['is_subscribed'] = user.follower.filter(
+                following__exact=int(representation['author']['id'])
+            ).exists()
+        representation["is_favorited"] = user.favourites.filter(
+            recipe__exact=instance
+        ).exists()
+        representation["is_in_shopping_cart"] = user.shoppings.filter(
+            recipe__exact=instance
+        ).exists()
+        return representation

@@ -17,6 +17,7 @@ from .serializers import (
     TagSerializers,
     IngredientSerializers,
     CreateRecipeSerializer,
+    GetRetrieveRecipeSerializer
 )
 
 
@@ -45,9 +46,16 @@ class Ingredient(
 class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
     queryset = Recipe.objects.all()
-    http_method_names = ['post']
+    http_method_names = ['post', 'get']
     serializer_class = CreateRecipeSerializer
     # permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateRecipeSerializer
+        if self.action in ('list', 'retrieve'):
+            return GetRetrieveRecipeSerializer
+        return CreateRecipeSerializer
 
 
 class FollowViewSet(
