@@ -48,39 +48,6 @@ class IngredientSerializers(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True,
-    )
-    following = serializers.SlugRelatedField(
-        # slug_field='username',
-        slug_field='id',
-        queryset=User.objects.all(),
-        error_messages={
-            'does_not_exist': 'Учетные данные не были предоставлены вообще.'
-        },
-    )
-
-    class Meta:
-        model = Follow
-        fields = ('user', 'following',)
-
-    def validate(self, data):
-        data['user'] = self.context['request'].user
-        if data['user'].follower.filter(
-            following__exact=data['following']
-        ).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя'
-            )
-        if data['following'] == data['user']:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на себя (даже если очень хочется).'
-            )
-        return data
-
-
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
@@ -270,22 +237,143 @@ class GetRetrieveRecipeSerializer(serializers.ModelSerializer):
 
 
 class GetLinkSerializer(serializers.ModelSerializer):
-    short_link = serializers.HyperlinkedRelatedField(
+    id = serializers.HyperlinkedRelatedField(
         read_only=True,
         view_name='recipes-detail',
         lookup_url_kwarg='pk',
-        source='id'
     )
-    # author = serializers.HyperlinkedRelatedField(
-    #     read_only=True,
-    #     view_name='recipes-detail',
-    #     lookup_field='pk',
-    # )
 
     class Meta:
         model = Recipe
-        fields = ('short_link', )
-        # fields = ['short-link', 'short_link']
-        # extra_kwargs = {
-        #     'short-link': {'source': 'short_link'},
-        # }
+        fields = ('id', )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['short-link'] = representation.pop('id')
+        return representation
+
+
+class RecipeForFollowSerializer(serializers.ModelSerializer):
+    tags = TagSerializers(many=True, source='tag')
+    author = UserSerializer()
+    text = serializers.CharField(source='description')
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id', 'tags', 'author', 'name',
+            'image', 'text', 'cooking_time'
+        )
+        read_only_fields = (
+            'id', 'tags', 'author', 'name',
+            'image', 'text', 'cooking_time'
+        )
+
+
+class FollowSerializer(serializers.ModelSerializer):
+
+    is_subscribed = serializers.CharField(required=False)
+    recipes_count = serializers.IntegerField(required=False)
+    recipes = RecipeForFollowSerializer(required=False, many=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'avatar', 'recipes_count', 'recipes'
+        )
+        read_only_fields = (
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'avatar', 'is_subscribed', 'recipes_count', 'recipes'
+        )
+
+    def validate(self, data):
+        user = self.context['request'].user
+        pk = self.context["pk"]
+        following = get_object_or_404(User, pk=pk)
+        if user.follower.filter(
+            following__exact=following
+        ).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого пользователя'
+            )
+        if following == user:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на себя (даже если очень хочется).'
+            )
+        data['email'] = following.email
+        data['id'] = following.id
+        data['username'] = following.username
+        data['first_name'] = following.first_name
+        data['last_name'] = following.last_name
+        data['avatar'] = following.avatar
+        return data
+
+    def create(self, validated_data):
+        instance = Follow.objects.create(
+            user=self.context['request'].user,
+            following=User.objects.get(pk=self.context["pk"])
+        )
+        return instance
+
+    def get_all_recipes(self, data):
+        serializer = RecipeForFollowSerializer(data=data, many=True)
+        serializer.is_valid()
+        return serializer.data
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        user = self.context['request'].user
+        following = User.objects.get(pk=self.context["pk"])
+        representation['is_subscribed'] = self.context[
+            'request'].user.follower.filter(
+                following__exact=following
+            ).exists()
+        representation['recipes_count'] = following.recipes.count()
+        representation['recipes'] = self.get_all_recipes(data=following.recipes.all())
+        for item in representation['recipes']:
+            item['is_favorited'] = user.favourites.filter(
+                recipe=int(item['id'])
+            ).exists()
+            item['is_in_shopping_cart'] = user.shoppings.filter(
+                recipe=int(item['id'])
+            ).exists()
+        return representation
+
+
+class FollowListSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+    )
+    following = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+    )
+
+    class Meta:
+        model = Follow
+        fields = ('user', 'following',)
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ['id', 'image', 'name', 'cooking_time']
+        read_only_fields = ('id', 'image', 'name', 'cooking_time', )
+
+    def validate(self, data):
+        user = self.context['request'].user
+        recipe = get_object_or_404(Recipe, pk=self.context["pk"])
+        if user.favourites.filter(
+            recipe__exact=recipe
+        ).exists():
+            raise serializers.ValidationError(
+                'Вы уже добавили этот рецепт в избранные'
+            )
+        data['id'] = recipe.id
+        data['image'] = recipe.image
+        data['name'] = recipe.name
+        data['cooking_time'] = recipe.cooking_time
+        return data

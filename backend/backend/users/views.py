@@ -15,9 +15,10 @@ from .serializers import (
     ChangePasswordSerializers,
     CreateTokenSerializer,
     AddAvatarSerializer,
+
 )
-from technol_parts_apps.models import Follow
-from technol_parts_apps.serializers import FollowSerializer
+from technol_parts_apps.models import Follow, Favorite, Recipe
+from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer, FavoriteSerializer
 
 
 class AddAvatarView(APIView):
@@ -127,34 +128,38 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
         def get_data_context_serializer():
             return FollowSerializer(
                 data=request.data,
-                context={'request': request}
+                context={'request': request, 'pk': pk}
             )
 
         if request.method == 'POST':
             serializer = get_data_context_serializer()
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            Follow.objects.create(
+                user=self.request.user,
+                following=get_object_or_404(User, pk=pk)
+            )
             return Response(serializer.data)
 
         if request.method == 'DELETE':
-            serializer = get_data_context_serializer()
-            serializer.is_valid()
+            # serializer = get_data_context_serializer()
+            # serializer.is_valid()
             instance = get_object_or_404(
                 Follow,
                 user=self.request.user,
-                following=serializer.data['following']
+                following=pk
+                # following=serializer.data['following']
             )
             instance.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
             detail=False,
-            url_path='subscribe',
+            url_path='subscriptions',
             methods=['GET'],
     )
     def list_subscribe(self, request):
         if request.method in SAFE_METHODS:
-            serializer = FollowSerializer(
+            serializer = FollowListSerializer(
                 data=request.user.follower.all(), many=True
             )
             serializer.is_valid()

@@ -10,7 +10,7 @@ from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # from .permissions import IsAdmin, IsUser
-from .models import Tag, Ingredient, Recipe
+from .models import Tag, Ingredient, Recipe, Favorite
 from .serializers import (
     User,
     FollowSerializer,
@@ -19,7 +19,8 @@ from .serializers import (
     CreateRecipeSerializer,
     GetRetrieveRecipeSerializer,
     UpdateRecipeSerializer,
-    GetLinkSerializer
+    GetLinkSerializer,
+    FavoriteSerializer
 )
 
 
@@ -71,6 +72,35 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 context={'request': request}
             )
             return Response(serializer.data)
+
+    @action(
+            detail=True,
+            url_path='favorite',
+            methods=['POST', 'DELETE'],
+    )
+    def doing_favorite(self, request, pk=None):
+
+        if request.method == 'POST':
+            serializer = FavoriteSerializer(
+                data=request.data,
+                context={'request': request, 'pk': pk}
+            )
+            serializer.is_valid(raise_exception=True)
+            Favorite.objects.create(
+                user=self.request.user,
+                recipe=Recipe.objects.get(pk=pk)
+            )
+            return Response(serializer.data)
+
+        if request.method == 'DELETE':
+            instance = get_object_or_404(
+                Favorite,
+                user=self.request.user,
+                recipe=pk
+            )
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 class FollowViewSet(
