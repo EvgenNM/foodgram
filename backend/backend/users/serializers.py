@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.shortcuts import get_object_or_404
 
 from rest_framework import serializers
@@ -8,10 +8,15 @@ import users.constants as const
 import base64
 import time
 import re
-
+from technol_parts_apps.models import Follow
 from django.core.files.base import ContentFile
 
+from djoser.serializers import (
+    UserSerializer, UserCreateSerializer, SetPasswordSerializer,
+    TokenSerializer, TokenCreateSerializer
+)
 
+import djoser.serializers as djs
 User = get_user_model()
 
 ERROR_MESSAGES = {
@@ -119,7 +124,10 @@ class UserCreateSerializer(AbstractUserSerializer):
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'username', 'email', 'password')
+        fields = (
+            'id', 'first_name', 'last_name', 'username', 'email', 'password'
+        )
+        read_only_fields = ('id', )
 
     def validate(self, data):
         if User.objects.filter(username=data['username']).exists():
@@ -135,6 +143,10 @@ class UserCreateSerializer(AbstractUserSerializer):
         data['last_name'] = data['last_name'].title()
         return data
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation.pop('password')
+        return representation
 
 class UserProfileSerializer(AbstractUserSerializer):
 
@@ -142,7 +154,7 @@ class UserProfileSerializer(AbstractUserSerializer):
         model = User
         fields = (
             'id', 'first_name', 'last_name',
-            'username', 'email', 'avatar', 'password'
+            'username', 'email', 'avatar',
         )
 
 
@@ -162,3 +174,84 @@ class AddAvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar', )
+
+
+##########################################################
+#    СЕРИАЛИЗАТОРЫ ДЖОСЕРА !!!!!!!!!!!!!!!!!!!!!!!!!!    #
+##########################################################
+
+class CreateTokenUserSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        params = {'email': attrs.get('email')}
+        self.user = authenticate(
+            request=self.context.get("request"),
+            **params,
+            password=password
+        )
+        if not self.user:
+            self.user = User.objects.filter(**params).first()
+            if self.user and not self.user.check_password(password):
+                self.fail("invalid_credentials")
+        if self.user and self.user.is_active:
+            return attrs
+        self.fail("invalid_credentials")
+
+
+class CreateUserSerializer(djs.UserCreateSerializer):
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'first_name', 'last_name', 'username', 'email', 'password'
+        )
+        read_only_fields = ('id', )
+
+
+class RetrieveUserSerializer(djs.UserSerializer):
+    avatar = Base64ImageField(required=False)
+    is_subscribed = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'first_name', 'last_name', 'username',
+            'email', 'avatar', 'is_subscribed'
+        )
+        read_only_fields = ('id', 'is_subscribed')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['is_subscribed'] = False
+        return representation
+
+
+class RetrieveOtherUserSerializer(RetrieveUserSerializer):
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if self.context['request'].auth and representation.get('id'):
+            representation['is_subscribed'] = Follow.objects.filter(
+                user=self.context['request'].user,
+                following=get_object_or_404(
+                    User,
+                    pk=representation['id'])).exists()
+            return representation
+        return representation
+
+
+# class ResetPasswordSerializer(djs.SetPasswordSerializer):
+
+#     def validate(self, attrs):
+#         user = self.context["request"].user or self.user
+#         # why assert? There are ValidationError / fail everywhere
+#         assert user is not None
+
+#         try:
+#             validate_password(attrs["new_password"], user)
+#         except django_exceptions.ValidationError as e:
+#             raise serializers.ValidationError({"new_password": list(e.messages)})
+#         return super().validate(attrs)

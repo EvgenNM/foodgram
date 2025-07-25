@@ -129,14 +129,47 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', 
+    ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+} 
+
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
 
+    # 'DEFAULT_AUTHENTICATION_CLASSES': [
+    #     'rest_framework_simplejwt.authentication.JWTAuthentication',
+    # ],
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 6,
+    'SEARCH_PARAM': 'name'
+}
+
+DJOSER = {
+    'SERIALIZERS': {
+        'set_password': 'djoser.serializers.SetPasswordSerializer',
+        # 'user_create': 'djoser.serializers.UserCreateSerializer',
+        'user_create': 'users.serializers.CreateUserSerializer',
+        'user': 'users.serializers.RetrieveOtherUserSerializer',
+        'current_user': 'users.serializers.RetrieveUserSerializer',
+        'token': 'djoser.serializers.TokenSerializer',
+        'token_create': 'users.serializers.CreateTokenUserSerializer',
+        'provider_auth': 'djoser.social.serializers.ProviderAuthSerializer',
+},
 }
 
 

@@ -6,7 +6,7 @@ from rest_framework.permissions import SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework.pagination import LimitOffsetPagination
 # from .permissions import IsAdmin, IsUser
 from .serializers import (
     User,
@@ -19,7 +19,10 @@ from .serializers import (
 )
 from technol_parts_apps.models import Follow, Favorite, Recipe
 from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer, FavoriteSerializer
+from django.shortcuts import get_object_or_404
 
+import djoser.views
+from django_filters.rest_framework import DjangoFilterBackend
 
 class AddAvatarView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -31,7 +34,7 @@ class AddAvatarView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request):
         request.user.avatar.delete()
@@ -88,6 +91,7 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     http_method_names = ['get', 'post', 'delete']
     # filter_backends = (filters.SearchFilter,)
+    pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -156,6 +160,78 @@ class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
             detail=False,
             url_path='subscriptions',
             methods=['GET'],
+    )
+    def list_subscribe(self, request):
+        if request.method in SAFE_METHODS:
+            serializer = FollowListSerializer(
+                data=request.user.follower.all(), many=True
+            )
+            serializer.is_valid()
+            return Response(serializer.data)
+        
+
+######################################
+# РАБОТА с ДЖОСЕРОМ ##################
+######################################
+
+
+class UserrsViwset(djoser.views.UserViewSet):
+    pagination_class = LimitOffsetPagination
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        return User.objects.all()
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return (permissions.AllowAny(), )
+        if self.action in ('doing_subscribe', 'list_subscribe'):
+            return (permissions.IsAuthenticated(),)
+        return super().get_permissions()
+
+    def retrieve(self, request, *args, **kwargs):
+        if self.action != 'me':
+            instance = get_object_or_404(User, pk=kwargs['pk'])
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        return super().retrieve(request, *args, **kwargs)
+
+    @action(
+            detail=True,
+            url_path='subscribe',
+            methods=['POST', 'DELETE'],
+    )
+    def doing_subscribe(self, request, pk=None):
+
+        def get_data_context_serializer():
+            return FollowSerializer(
+                data=request.data,
+                context={'request': request, 'pk': pk}
+            )
+
+        if request.method == 'POST':
+            serializer = get_data_context_serializer()
+            serializer.is_valid(raise_exception=True)
+            Follow.objects.create(
+                user=self.request.user,
+                following=get_object_or_404(User, pk=pk)
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            instance = get_object_or_404(
+                Follow,
+                user=self.request.user,
+                following=pk
+            )
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+            detail=False,
+            url_path='subscriptions',
+            methods=['GET'],
+            pagination_class=LimitOffsetPagination
     )
     def list_subscribe(self, request):
         if request.method in SAFE_METHODS:

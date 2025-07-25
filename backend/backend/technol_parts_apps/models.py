@@ -48,7 +48,7 @@ class Recipe(NameFieldModelBase):
     ingredients = models.ManyToManyField(
         'Ingredient', through='RecipeIngredient', null=True, blank=True
     )
-    tag = models.ManyToManyField(
+    tags = models.ManyToManyField(
         'Tag', through='RecipeTag', null=True, blank=True)
 
     class Meta:
