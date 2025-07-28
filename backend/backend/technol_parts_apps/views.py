@@ -10,7 +10,7 @@ from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 # from .permissions import IsAdmin, IsUser
-from .models import Tag, Ingredient, Recipe, Favorite, Shopping
+from .models import Tag, Ingredient, Recipe, Favorite, Shopping, Follow
 from rest_framework import filters
 from .serializers import (
     User,
@@ -25,7 +25,8 @@ from .serializers import (
     ShoppingSerializer,
     listRecipeSerializer
 )
-
+from .permissions import IsAuthorAuthenticated
+from django.core.exceptions import ObjectDoesNotExist
 
 class TagViewSet(
     mixins.ListModelMixin,
@@ -55,10 +56,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
     queryset = Recipe.objects.all()
     http_method_names = ['post', 'get', 'patch', 'delete']
-    # permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author', 'tags')
+    filterset_fields = ('author', 'tags__slug')
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -68,10 +68,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return listRecipeSerializer
         return GetRetrieveRecipeSerializer
-    
+
     def get_permissions(self):
         if self.action in ('doing_favorite', 'doing_shopping_cart'):
             return (permissions.IsAuthenticated(), )
+        if self.action == 'destroy':
+            return (IsAuthorAuthenticated(), )
+        if self.action == 'partial_update':
+            return (IsAuthorAuthenticated(), )
         return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
@@ -79,10 +83,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         return super().create(request, *args, **kwargs)
 
-    def retrieve(self, request, *args, **kwargs):
-        if not request.auth:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        return super().retrieve(request, *args, **kwargs)
+    # def retrieve(self, request, *args, **kwargs):
+    #     if not request.auth:
+    #         return Response(status=status.HTTP_401_UNAUTHORIZED)
+    #     return super().retrieve(request, *args, **kwargs)
 
     @action(
             detail=True,
@@ -117,14 +121,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+        # if request.method == 'DELETE':
+        #     instance = get_object_or_404(
+        #         Favorite,
+        #         user=self.request.user,
+        #         recipe=pk
+        #     )
+        #     instance.delete()
+        #     return Response(status=status.HTTP_204_NO_CONTENT)
         if request.method == 'DELETE':
-            instance = get_object_or_404(
-                Favorite,
-                user=self.request.user,
-                recipe=pk
-            )
-            instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            recipe = get_object_or_404(Recipe, pk=pk)
+            try:
+
+                instance = Favorite.objects.get(
+                    user=self.request.user,
+                    recipe=recipe
+                )
+                # get_object_or_404(
+                #     Shopping,
+                #     user=self.request.user,
+                #     recipe=pk
+                # )
+                instance.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except ObjectDoesNotExist:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
             detail=True,
@@ -146,13 +167,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            instance = get_object_or_404(
-                Shopping,
-                user=self.request.user,
-                recipe=pk
-            )
-            instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            recipe = get_object_or_404(Recipe, pk=pk)
+            try:
+
+                instance = Shopping.objects.get(
+                    user=self.request.user,
+                    recipe=recipe
+                )
+                # get_object_or_404(
+                #     Shopping,
+                #     user=self.request.user,
+                #     recipe=pk
+                # )
+                instance.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except ObjectDoesNotExist:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
             detail=False,

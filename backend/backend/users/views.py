@@ -6,7 +6,7 @@ from rest_framework.permissions import SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 # from .permissions import IsAdmin, IsUser
 from .serializers import (
     User,
@@ -20,7 +20,7 @@ from .serializers import (
 from technol_parts_apps.models import Follow, Favorite, Recipe
 from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer, FavoriteSerializer
 from django.shortcuts import get_object_or_404
-
+from django.core.exceptions import ObjectDoesNotExist
 import djoser.views
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -179,6 +179,17 @@ class UserrsViwset(djoser.views.UserViewSet):
     pagination_class = LimitOffsetPagination
     lookup_field = 'pk'
 
+    # def get_pagination_class(self):
+    #     if self.request.query_params.get('limit', None) is None:
+    #         return PageNumberPagination
+    #     return LimitOffsetPagination
+
+    # def paginate_queryset(self, queryset):
+    #     # Используем динамический класс пагинации
+    #     pagination_class = self.get_pagination_class()
+    #     paginator = pagination_class()
+    #     return paginator.paginate_queryset(queryset, self.request, view=self)
+
     def get_queryset(self):
         return User.objects.all()
 
@@ -219,13 +230,28 @@ class UserrsViwset(djoser.views.UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            instance = get_object_or_404(
-                Follow,
-                user=self.request.user,
-                following=pk
-            )
-            instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            # Использование блока ТРУ?
+            following = get_object_or_404(User, pk=pk)
+            try:
+                instance = Follow.objects.get(
+                    user=self.request.user,
+                    following=following
+                )
+                instance.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except ObjectDoesNotExist:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
+            # if not Follow.objects.filter(
+            #     user=request.user, following=pk
+            # ).exists():
+            #     return Response(status=status.HTTP_400_BAD_REQUEST)
+            # instance = Follow.objects.get(
+            #     user=self.request.user,
+            #     following=following
+            # )
+            # instance.delete()
+            # return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
             detail=False,
