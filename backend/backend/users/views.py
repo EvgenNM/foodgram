@@ -2,27 +2,21 @@ from rest_framework import filters, permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-# from .permissions import IsAdmin, IsUser
 from .serializers import (
     User,
-    UserCreateSerializer,
-    UserProfileSerializer,
-    ChangePasswordSerializers,
-    CreateTokenSerializer,
     AddAvatarSerializer,
 
 )
 from technol_parts_apps.models import Follow, Favorite, Recipe
-from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer, FavoriteSerializer
+from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
 import djoser.views
-from django_filters.rest_framework import DjangoFilterBackend
+# from django_filters.rest_framework import DjangoFilterBackend
+
 
 class AddAvatarView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -41,154 +35,9 @@ class AddAvatarView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TokenCreateView(APIView):
-    """Получение токена."""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = CreateTokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = User.objects.get(
-            email=serializer.data['email'],
-            )
-
-        # ручное создание токена
-        refresh = RefreshToken.for_user(user)
-        data = {
-            'auth_token': str(refresh.access_token),
-        }
-        return Response(data, status=status.HTTP_200_OK)
-
-
-class ChangePasswordView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        serializer = ChangePasswordSerializers(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response('Пароль изменен', status=status.HTTP_204_NO_CONTENT)
-
-
-class Logout(APIView):
-
-    def post(self, request):
-        if request.user.is_authenticated:
-            token_access = RefreshToken(request.data.get('access'))
-            token_refresh = RefreshToken(request.data.get('refresh'))
-            token_access.blacklist()
-            token_refresh.blacklist()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        data = {'detail': 'Учетные данные не были предоставлены.'}
-        return Response(data, status=status.HTTP_401_UNAUTHORIZED)
-
-
-class CreateUserProfilelistViewSet(viewsets.ModelViewSet):
-    """Создание манипуляционного инструмента пользователями для админа."""
-    queryset = User.objects.all()
-    http_method_names = ['get', 'post', 'delete']
-    # filter_backends = (filters.SearchFilter,)
-    pagination_class = LimitOffsetPagination
-
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return UserCreateSerializer
-        return UserProfileSerializer
-
-    def get_permissions(self):
-        if self.action in (
-            'get_user_self', 'doing_subscribe', 'list_subscribe'
-        ):
-            return (permissions.IsAuthenticated(),)
-        # if self.action == 'list':
-        #     return (permissions.IsAdminUser(), )
-        return (permissions.AllowAny(), )
-
-    # Исключить удаление пользователя!!!!!!!!!!!!!!!
-
-    @action(
-        detail=False,
-        url_path='me',
-        methods=['GET'],
-    )
-    def get_user_self(self, request):
-
-        if request.method in SAFE_METHODS:
-            serializer = UserProfileSerializer(self.request.user)
-            return Response(serializer.data)
-
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    @action(
-            detail=True,
-            url_path='subscribe',
-            methods=['POST', 'DELETE'],
-    )
-    def doing_subscribe(self, request, pk=None):
-
-        def get_data_context_serializer():
-            return FollowSerializer(
-                data=request.data,
-                context={'request': request, 'pk': pk}
-            )
-
-        if request.method == 'POST':
-            serializer = get_data_context_serializer()
-            serializer.is_valid(raise_exception=True)
-            Follow.objects.create(
-                user=self.request.user,
-                following=get_object_or_404(User, pk=pk)
-            )
-            return Response(serializer.data)
-
-        if request.method == 'DELETE':
-            # serializer = get_data_context_serializer()
-            # serializer.is_valid()
-            instance = get_object_or_404(
-                Follow,
-                user=self.request.user,
-                following=pk
-                # following=serializer.data['following']
-            )
-            instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(
-            detail=False,
-            url_path='subscriptions',
-            methods=['GET'],
-    )
-    def list_subscribe(self, request):
-        if request.method in SAFE_METHODS:
-            serializer = FollowListSerializer(
-                data=request.user.follower.all(), many=True
-            )
-            serializer.is_valid()
-            return Response(serializer.data)
-        
-
-######################################
-# РАБОТА с ДЖОСЕРОМ ##################
-######################################
-
-
 class UserrsViwset(djoser.views.UserViewSet):
     pagination_class = LimitOffsetPagination
     lookup_field = 'pk'
-
-    # def get_pagination_class(self):
-    #     if self.request.query_params.get('limit', None) is None:
-    #         return PageNumberPagination
-    #     return LimitOffsetPagination
-
-    # def paginate_queryset(self, queryset):
-    #     # Используем динамический класс пагинации
-    #     pagination_class = self.get_pagination_class()
-    #     paginator = pagination_class()
-    #     return paginator.paginate_queryset(queryset, self.request, view=self)
 
     def get_queryset(self):
         return User.objects.all()
@@ -217,7 +66,13 @@ class UserrsViwset(djoser.views.UserViewSet):
         def get_data_context_serializer():
             return FollowSerializer(
                 data=request.data,
-                context={'request': request, 'pk': pk}
+                context={
+                    'request': request,
+                    'pk': pk,
+                    'recipes_limit': self.request.query_params.get(
+                        'recipes_limit'
+                    )
+                }
             )
 
         if request.method == 'POST':
@@ -230,7 +85,6 @@ class UserrsViwset(djoser.views.UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            # Использование блока ТРУ?
             following = get_object_or_404(User, pk=pk)
             try:
                 instance = Follow.objects.get(
@@ -242,17 +96,6 @@ class UserrsViwset(djoser.views.UserViewSet):
             except ObjectDoesNotExist:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
 
-            # if not Follow.objects.filter(
-            #     user=request.user, following=pk
-            # ).exists():
-            #     return Response(status=status.HTTP_400_BAD_REQUEST)
-            # instance = Follow.objects.get(
-            #     user=self.request.user,
-            #     following=following
-            # )
-            # instance.delete()
-            # return Response(status=status.HTTP_204_NO_CONTENT)
-
     @action(
             detail=False,
             url_path='subscriptions',
@@ -260,9 +103,22 @@ class UserrsViwset(djoser.views.UserViewSet):
             pagination_class=LimitOffsetPagination
     )
     def list_subscribe(self, request):
-        if request.method in SAFE_METHODS:
+        subscriptions = User.objects.filter(id__in=[
+            item.following.id for item in request.user.follower.all()
+        ])
+        if self.paginator is not None:
+            page = self.paginate_queryset(subscriptions)
             serializer = FollowListSerializer(
-                data=request.user.follower.all(), many=True
+                page,
+                many=True,
+                context={
+                    'request': request,
+                    'recipes_limit': self.request.query_params.get(
+                        'recipes_limit'
+                    )
+                },
+
             )
-            serializer.is_valid()
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
+        serializer = FollowListSerializer(subscriptions, many=True)
+        return Response(serializer.data)

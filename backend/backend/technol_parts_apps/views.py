@@ -10,7 +10,7 @@ from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 # from .permissions import IsAdmin, IsUser
-from .models import Tag, Ingredient, Recipe, Favorite, Shopping, Follow
+from .models import Tag, Ingredient, Recipe, Favorite, Shopping, Follow, RecipeTag
 from rest_framework import filters
 from .serializers import (
     User,
@@ -27,6 +27,7 @@ from .serializers import (
 )
 from .permissions import IsAuthorAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
+
 
 class TagViewSet(
     mixins.ListModelMixin,
@@ -54,11 +55,47 @@ class Ingredient(
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
-    queryset = Recipe.objects.all()
+    # queryset = Recipe.objects.all()
     http_method_names = ['post', 'get', 'patch', 'delete']
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author', 'tags__slug')
+    filterset_fields = ('author', )
+
+    def get_queryset(self):
+        is_favorited = self.request.query_params.get('is_favorited')
+        is_in_shopping_cart = self.request.query_params.get(
+            'is_in_shopping_cart'
+        )
+        if self.request.query_params.get('tags'):
+            filter_tags = []
+            for slug in self.request.query_params.getlist('tags'):
+                try:
+                    objects = Tag.objects.get(slug=slug).tag_recipes.all()
+                    for obj in objects:
+                        filter_tags += [obj.recipe.id]
+                except ObjectDoesNotExist:
+                    pass
+            return Recipe.objects.filter(id__in=filter_tags)
+        if is_favorited and is_favorited.isdigit() and self.request.auth:
+            filter_is_favorited = [
+                item.recipe.id for
+                item in self.request.user.favourites.all()[:int(is_favorited)]
+            ]
+            return Recipe.objects.filter(id__in=filter_is_favorited)
+        if (
+            is_in_shopping_cart
+            and is_in_shopping_cart.isdigit()
+            and self.request.auth
+        ):
+            filter_is_in_shopping_cart = [
+                item.recipe.id for
+                item in self.request.user.shoppings.all()[
+                    :int(is_in_shopping_cart)
+                ]
+            ]
+            return Recipe.objects.filter(id__in=filter_is_in_shopping_cart)
+
+        return Recipe.objects.all()
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -70,23 +107,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return GetRetrieveRecipeSerializer
 
     def get_permissions(self):
-        if self.action in ('doing_favorite', 'doing_shopping_cart'):
+        if self.action in ('doing_favorite', 'doing_shopping_cart', 'create'):
             return (permissions.IsAuthenticated(), )
         if self.action == 'destroy':
             return (IsAuthorAuthenticated(), )
         if self.action == 'partial_update':
             return (IsAuthorAuthenticated(), )
         return super().get_permissions()
-
-    def create(self, request, *args, **kwargs):
-        if not request.auth:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        return super().create(request, *args, **kwargs)
-
-    # def retrieve(self, request, *args, **kwargs):
-    #     if not request.auth:
-    #         return Response(status=status.HTTP_401_UNAUTHORIZED)
-    #     return super().retrieve(request, *args, **kwargs)
 
     @action(
             detail=True,
@@ -121,14 +148,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        # if request.method == 'DELETE':
-        #     instance = get_object_or_404(
-        #         Favorite,
-        #         user=self.request.user,
-        #         recipe=pk
-        #     )
-        #     instance.delete()
-        #     return Response(status=status.HTTP_204_NO_CONTENT)
         if request.method == 'DELETE':
             recipe = get_object_or_404(Recipe, pk=pk)
             try:
@@ -137,11 +156,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     user=self.request.user,
                     recipe=recipe
                 )
-                # get_object_or_404(
-                #     Shopping,
-                #     user=self.request.user,
-                #     recipe=pk
-                # )
                 instance.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except ObjectDoesNotExist:
@@ -151,6 +165,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             detail=True,
             url_path='shopping_cart',
             methods=['POST', 'DELETE'],
+
     )
     def doing_shopping_cart(self, request, pk=None):
 
@@ -164,7 +179,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=self.request.user,
                 recipe=Recipe.objects.get(pk=pk)
             )
-            return Response(status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             recipe = get_object_or_404(Recipe, pk=pk)
@@ -174,11 +189,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     user=self.request.user,
                     recipe=recipe
                 )
-                # get_object_or_404(
-                #     Shopping,
-                #     user=self.request.user,
-                #     recipe=pk
-                # )
                 instance.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except ObjectDoesNotExist:
@@ -216,32 +226,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
             #     return FileResponse(carts)
 
             return Response(response)
-
-
-class FollowViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
-    serializer_class = FollowSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return self.request.user.follower.all()
-
-    # def get_user_follow(self):
-    #     user_id = self.kwargs['user_id']
-    #     return get_object_or_404(User, pk=user_id)
-
-    # def perform_create(self, serializer):
-    #     serializer.save(
-    #         user=self.request.user,
-    #         following=self.get_user_follow()
-    #     )
-
-    # def perform_destroy(self, instance):
-    #     instance = self.request.user.follower.filter(
-    #         following__exact=self.get_user_follow()
-    #     )
-    #     instance.delete()

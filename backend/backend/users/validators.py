@@ -31,14 +31,14 @@ def validator_password(value):
         )
 
 
-def exam_password(value):
-    if (
-        value['first_name'] in value['password']
-        or value['last_name'] in value['password']
-        or value['password'] in value['email']
-        or value['username'] in value['password']
-    ):
-        raise ValidationError(
-            'Ваш пароль не может совпадать с именем или другой '
-            'персональной информацией или быть слишком похожим на нее'
-        )
+# def exam_password(value):
+#     if (
+#         value['first_name'] in value['password']
+#         or value['last_name'] in value['password']
+#         or value['password'] in value['email']
+#         or value['username'] in value['password']
+#     ):
+#         raise ValidationError(
+#             'Ваш пароль не может совпадать с именем или другой '
+#             'персональной информацией или быть слишком похожим на нее'
+#         )

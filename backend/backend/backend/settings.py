@@ -31,8 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_simplejwt',  # Пробуем
-    'rest_framework_simplejwt.token_blacklist',
+    # 'rest_framework_simplejwt',  # Пробуем
+    # 'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'djoser',
     # 'django_filters',
@@ -141,16 +141,6 @@ REST_FRAMEWORK = {
 } 
 
 REST_FRAMEWORK = {
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.IsAuthenticated',
-    # ],
-
-    # 'DEFAULT_AUTHENTICATION_CLASSES': [
-    #     'rest_framework_simplejwt.authentication.JWTAuthentication',
-    # ],
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.IsAuthenticated',
-    # ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
@@ -162,20 +152,11 @@ REST_FRAMEWORK = {
 DJOSER = {
     'SERIALIZERS': {
         'set_password': 'djoser.serializers.SetPasswordSerializer',
-        # 'user_create': 'djoser.serializers.UserCreateSerializer',
         'user_create': 'users.serializers.CreateUserSerializer',
         'user': 'users.serializers.RetrieveOtherUserSerializer',
         'current_user': 'users.serializers.RetrieveUserSerializer',
         'token': 'djoser.serializers.TokenSerializer',
         'token_create': 'users.serializers.CreateTokenUserSerializer',
-        'provider_auth': 'djoser.social.serializers.ProviderAuthSerializer',
+        # 'provider_auth': 'djoser.social.serializers.ProviderAuthSerializer',
 },
-}
-
-
-SIMPLE_JWT = {
-    # Устанавливаем срок жизни токена
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'BLACKLIST_AFTER_ROTATION': True,
 }
