@@ -7,7 +7,7 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework import permissions
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Tag, Ingredient, Recipe, Favorite, Shopping, Follow, RecipeTag
+from .models import Tag, Ingredient, Recipe, Favorite, Shopping
 from rest_framework import filters
 from .serializers import (
     TagSerializers,

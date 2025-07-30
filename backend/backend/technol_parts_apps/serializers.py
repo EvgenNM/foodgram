@@ -200,21 +200,9 @@ class UpdateRecipeSerializer(CreateRecipeSerializer):
         return instance
 
 
-class UserSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = (
-            'email', 'id', 'username', 'first_name', 'last_name', 'avatar'
-        )
-        read_only_fields = (
-            'email', 'id', 'username', 'first_name', 'last_name', 'avatar'
-        )
-
-
 class GetRecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializers(many=True)
-    author = UserSerializer()
+    author = RetrieveUserSerializer()
     ingredients = IngredientSerializers(many=True)
     text = serializers.CharField(source='description')
 
@@ -237,12 +225,11 @@ class GetRecipeSerializer(serializers.ModelSerializer):
                 ingredient__id=int(ingredient['id'])).amount
         if self.context['request'].auth:
             user = self.context['request'].user
-            if representation['author']:
-                representation['author'][
-                    'is_subscribed'
-                ] = user.follower.filter(
-                    following__exact=int(representation['author']['id'])
-                ).exists()
+            representation['author'][
+                'is_subscribed'
+            ] = user.follower.filter(
+                following__exact=int(representation['author']['id'])
+            ).exists()
             representation["is_favorited"] = user.favourites.filter(
                 recipe__exact=instance
             ).exists()
@@ -251,7 +238,6 @@ class GetRecipeSerializer(serializers.ModelSerializer):
             ).exists()
             return representation
 
-        representation['author']['is_subscribed'] = False
         representation["is_favorited"] = False
         representation["is_in_shopping_cart"] = False
         return representation
@@ -274,21 +260,6 @@ class GetLinkSerializer(serializers.ModelSerializer):
         return representation
 
 
-class RecipeForFollowSerializer(serializers.ModelSerializer):
-    tags = TagSerializers(many=True)
-    author = UserSerializer()
-    text = serializers.CharField(source='description')
-
-    class Meta:
-        model = Recipe
-        fields = (
-            'id', 'tags', 'author', 'name', 'image', 'text', 'cooking_time'
-        )
-        read_only_fields = (
-            'id', 'tags', 'author', 'name', 'image', 'text', 'cooking_time'
-        )
-
-
 class RecipeForListFollowSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -299,41 +270,36 @@ class RecipeForListFollowSerializer(serializers.ModelSerializer):
 
 class FollowSerializer(serializers.ModelSerializer):
 
-    is_subscribed = serializers.CharField(required=False)
-    recipes_count = serializers.IntegerField(required=False)
-    recipes = RecipeForFollowSerializer(required=False, many=True)
-
     class Meta:
         model = User
         fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'is_subscribed', 'avatar', 'recipes_count', 'recipes'
+            'email', 'id', 'username', 'first_name', 'last_name', 'avatar',
         )
         read_only_fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'avatar', 'is_subscribed', 'recipes_count', 'recipes'
+            'email', 'id', 'username', 'first_name', 'last_name', 'avatar',
         )
 
     def validate(self, data):
-        user = self.context['request'].user
-        pk = self.context["pk"]
-        following = get_object_or_404(User, pk=pk)
-        if user.follower.filter(
-            following__exact=following
-        ).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя'
-            )
-        if following == user:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на себя (даже если очень хочется).'
-            )
-        data['email'] = following.email
-        data['id'] = following.id
-        data['username'] = following.username
-        data['first_name'] = following.first_name
-        data['last_name'] = following.last_name
-        data['avatar'] = following.avatar
+        if self.context.get("pk"):
+            user = self.context['request'].user
+            pk = self.context["pk"]
+            following = get_object_or_404(User, pk=pk)
+            if user.follower.filter(
+                following__exact=following
+            ).exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого пользователя'
+                )
+            if following == user:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на себя (даже если очень хочется).'
+                )
+            data['email'] = following.email
+            data['id'] = following.id
+            data['username'] = following.username
+            data['first_name'] = following.first_name
+            data['last_name'] = following.last_name
+            data['avatar'] = following.avatar
         return data
 
     def create(self, validated_data):
@@ -344,45 +310,10 @@ class FollowSerializer(serializers.ModelSerializer):
         return instance
 
     def get_all_recipes(self, data):
-        serializer = RecipeForFollowSerializer(data, many=True)
+        serializer = RecipeForListFollowSerializer(data, many=True)
         if self.context["recipes_limit"]:
             return serializer.data[:int(self.context["recipes_limit"])]
         return serializer.data
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        user = self.context['request'].user
-        following = User.objects.get(pk=self.context["pk"])
-        representation['is_subscribed'] = user.follower.filter(
-            following__exact=following
-        ).exists()
-        representation['recipes_count'] = following.recipes.count()
-        representation['recipes'] = self.get_all_recipes(
-            data=following.recipes.all()
-        )
-        for item in representation['recipes']:
-            if 'tags' in item:
-                item.pop('tags')
-                item.pop('author')
-                item.pop('text')
-        return representation
-
-
-class FollowListSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.CharField(required=False)
-    recipes_count = serializers.IntegerField(required=False)
-    recipes = RecipeForListFollowSerializer(required=False, many=True)
-
-    class Meta:
-        model = User
-        fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'is_subscribed', 'avatar', 'recipes_count', 'recipes'
-        )
-        read_only_fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'avatar', 'is_subscribed', 'recipes_count', 'recipes'
-        )
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -391,13 +322,10 @@ class FollowListSerializer(serializers.ModelSerializer):
         representation['is_subscribed'] = user.follower.filter(
             following__exact=following
         ).exists()
-        if self.context['recipes_limit'] and self.context[
-            'recipes_limit'
-        ].isdigit():
-            representation['recipes'] = representation[
-                'recipes'
-            ][:int(self.context['recipes_limit'])]
-        representation['recipes_count'] = following.recipes.all().count()
+        representation['recipes_count'] = following.recipes.count()
+        representation['recipes'] = self.get_all_recipes(
+            data=following.recipes.all()
+        )
         return representation
 
 

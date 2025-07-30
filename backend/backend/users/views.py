@@ -4,18 +4,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from .serializers import (
     User,
     AddAvatarSerializer,
-
 )
-from technol_parts_apps.models import Follow, Favorite, Recipe
-from technol_parts_apps.serializers import FollowSerializer, FollowListSerializer
+from technol_parts_apps.models import Follow
+from technol_parts_apps.serializers import FollowSerializer
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
 import djoser.views
 # from django_filters.rest_framework import DjangoFilterBackend
+from technol_parts_apps.permissions import IsAuthorAuthenticated
 
 
 class AddAvatarView(APIView):
@@ -108,7 +108,7 @@ class UserrsViwset(djoser.views.UserViewSet):
         ])
         if self.paginator is not None:
             page = self.paginate_queryset(subscriptions)
-            serializer = FollowListSerializer(
+            serializer = FollowSerializer(
                 page,
                 many=True,
                 context={
@@ -120,5 +120,5 @@ class UserrsViwset(djoser.views.UserViewSet):
 
             )
             return self.get_paginated_response(serializer.data)
-        serializer = FollowListSerializer(subscriptions, many=True)
+        serializer = FollowSerializer(subscriptions, many=True)
         return Response(serializer.data)

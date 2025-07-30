@@ -11,10 +11,10 @@ from django.core.files.base import ContentFile
 import djoser.serializers as djs
 User = get_user_model()
 
-ERROR_MESSAGES = {
-    'required': const.NOT_REQUIRED_MESSAGE,
-    'blank': const.NOT_BLANK_MESSAGE
-}
+# ERROR_MESSAGES = {
+#     'required': const.NOT_REQUIRED_MESSAGE,
+#     'blank': const.NOT_BLANK_MESSAGE
+# }
 
 
 class Base64ImageField(serializers.ImageField):
@@ -68,15 +68,12 @@ class CreateUserSerializer(djs.UserCreateSerializer):
 
 class RetrieveUserSerializer(djs.UserSerializer):
     avatar = Base64ImageField(required=False)
-    is_subscribed = serializers.BooleanField(required=False)
 
     class Meta:
         model = User
         fields = (
-            'id', 'first_name', 'last_name', 'username',
-            'email', 'avatar', 'is_subscribed'
+            'id', 'first_name', 'last_name', 'username', 'email', 'avatar',
         )
-        read_only_fields = ('id', 'is_subscribed')
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
