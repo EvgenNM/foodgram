@@ -31,11 +31,6 @@ class User(AbstractUser):
         max_length=const.PASSWORD_LENGTH,
         validators=[vd.validator_password]
     )
-    # avatar = models.CharField(
-    #     max_length=const.PASSWORD_LENGTH,
-    #     verbose_name='Аватарка',
-    #     blank=True
-    # )
     avatar = models.ImageField(
         upload_to='users/',
         blank=True,

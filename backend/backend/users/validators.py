@@ -29,16 +29,3 @@ def validator_password(value):
         raise ValidationError(
             'Пароль не может состоять только маленьких букв'
         )
-
-
-# def exam_password(value):
-#     if (
-#         value['first_name'] in value['password']
-#         or value['last_name'] in value['password']
-#         or value['password'] in value['email']
-#         or value['username'] in value['password']
-#     ):
-#         raise ValidationError(
-#             'Ваш пароль не может совпадать с именем или другой '
-#             'персональной информацией или быть слишком похожим на нее'
-#         )

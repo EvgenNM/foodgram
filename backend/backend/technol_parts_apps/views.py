@@ -3,27 +3,21 @@ from django.http import FileResponse
 from rest_framework import filters, permissions, viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework import permissions
-from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
-# from .permissions import IsAdmin, IsUser
 from .models import Tag, Ingredient, Recipe, Favorite, Shopping, Follow, RecipeTag
 from rest_framework import filters
 from .serializers import (
-    User,
-    FollowSerializer,
     TagSerializers,
     IngredientSerializers,
     CreateRecipeSerializer,
-    GetRetrieveRecipeSerializer,
+    GetRecipeSerializer,
     UpdateRecipeSerializer,
     GetLinkSerializer,
     FavoriteSerializer,
     ShoppingSerializer,
-    listRecipeSerializer
 )
 from .permissions import IsAuthorAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
@@ -55,7 +49,6 @@ class Ingredient(
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
-    # queryset = Recipe.objects.all()
     http_method_names = ['post', 'get', 'patch', 'delete']
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend,)
@@ -102,16 +95,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return CreateRecipeSerializer
         if self.action == 'partial_update':
             return UpdateRecipeSerializer
-        if self.action == 'list':
-            return listRecipeSerializer
-        return GetRetrieveRecipeSerializer
+        return GetRecipeSerializer
 
     def get_permissions(self):
         if self.action in ('doing_favorite', 'doing_shopping_cart', 'create'):
             return (permissions.IsAuthenticated(), )
-        if self.action == 'destroy':
-            return (IsAuthorAuthenticated(), )
-        if self.action == 'partial_update':
+        if self.action in ('destroy', 'partial_update'):
             return (IsAuthorAuthenticated(), )
         return super().get_permissions()
 

@@ -27,9 +27,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'image',
         'pub_date',
         'description',
-        # 'ingredients',
         'cooking_time',
-        # 'tag',
         'get_ingredient'
     )
 
@@ -41,8 +39,6 @@ class RecipeAdmin(admin.ModelAdmin):
 
     get_ingredient.short_description = 'Ингредиенты'
 
-    # filter_horizontal = ('ingredients', )
-
 
 admin.site.register(Favorite)
 admin.site.register(Follow)
@@ -51,4 +47,3 @@ admin.site.register(RecipeIngredient)
 admin.site.register(RecipeTag)
 admin.site.register(Shopping)
 admin.site.register(Tag)
-#RecipeTag
