@@ -1,21 +1,15 @@
-from rest_framework import filters, permissions, viewsets, status
+import djoser.views
+from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions, status
 from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions
-from rest_framework.pagination import LimitOffsetPagination
-from .serializers import (
-    User,
-    AddAvatarSerializer,
-)
 from technol_parts_apps.models import Follow
 from technol_parts_apps.serializers import FollowSerializer
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import ObjectDoesNotExist
-import djoser.views
-# from django_filters.rest_framework import DjangoFilterBackend
-from technol_parts_apps.permissions import IsAuthorAuthenticated
+
+from .serializers import AddAvatarSerializer, User
 
 
 class AddAvatarView(APIView):
@@ -57,9 +51,9 @@ class UserrsViwset(djoser.views.UserViewSet):
         return super().retrieve(request, *args, **kwargs)
 
     @action(
-            detail=True,
-            url_path='subscribe',
-            methods=['POST', 'DELETE'],
+        detail=True,
+        url_path='subscribe',
+        methods=['POST', 'DELETE'],
     )
     def doing_subscribe(self, request, pk=None):
 
@@ -97,10 +91,10 @@ class UserrsViwset(djoser.views.UserViewSet):
                 return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
-            detail=False,
-            url_path='subscriptions',
-            methods=['GET'],
-            pagination_class=LimitOffsetPagination
+        detail=False,
+        url_path='subscriptions',
+        methods=['GET'],
+        pagination_class=LimitOffsetPagination
     )
     def list_subscribe(self, request):
         subscriptions = User.objects.filter(id__in=[

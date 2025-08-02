@@ -1,21 +1,18 @@
+import technol_parts_apps.models as md
 from django.contrib import admin
-
-from .models import (
-    Favorite, Follow, Ingredient, Recipe,
-    RecipeIngredient, Shopping, Tag, RecipeTag,
-)
 
 
 class RecipeIngredientInline(admin.StackedInline):
-    model = RecipeIngredient
+    model = md.RecipeIngredient
     extra = 0
 
 
 class RecipeTagInline(admin.StackedInline):
-    model = RecipeTag
+    model = md.RecipeTag
     extra = 0
 
-@admin.register(Recipe)
+
+@admin.register(md.Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     inlines = (
         RecipeIngredientInline, RecipeTagInline
@@ -40,10 +37,10 @@ class RecipeAdmin(admin.ModelAdmin):
     get_ingredient.short_description = 'Ингредиенты'
 
 
-admin.site.register(Favorite)
-admin.site.register(Follow)
-admin.site.register(Ingredient)
-admin.site.register(RecipeIngredient)
-admin.site.register(RecipeTag)
-admin.site.register(Shopping)
-admin.site.register(Tag)
+admin.site.register(md.Favorite)
+admin.site.register(md.Follow)
+admin.site.register(md.Ingredient)
+admin.site.register(md.RecipeIngredient)
+admin.site.register(md.RecipeTag)
+admin.site.register(md.Shopping)
+admin.site.register(md.Tag)

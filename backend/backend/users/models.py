@@ -1,8 +1,7 @@
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-
 import users.constants as const
 import users.validators as vd
+from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class User(AbstractUser):
@@ -36,7 +35,7 @@ class User(AbstractUser):
         blank=True,
         null=True,
         default=None
-        )
+    )
 
     class Meta:
         verbose_name = 'Пользователь'

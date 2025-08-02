@@ -1,20 +1,13 @@
-from django.contrib.auth import authenticate, get_user_model
-from django.shortcuts import get_object_or_404
-
-from rest_framework import serializers
-
-import users.constants as const
 import base64
-from technol_parts_apps.models import Follow
-from django.core.files.base import ContentFile
 
 import djoser.serializers as djs
-User = get_user_model()
+from django.contrib.auth import authenticate, get_user_model
+from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+from technol_parts_apps.models import Follow
 
-# ERROR_MESSAGES = {
-#     'required': const.NOT_REQUIRED_MESSAGE,
-#     'blank': const.NOT_BLANK_MESSAGE
-# }
+User = get_user_model()
 
 
 class Base64ImageField(serializers.ImageField):

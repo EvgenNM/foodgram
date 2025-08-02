@@ -1,14 +1,8 @@
+import djoser.views
 from django.urls import include, path
-
 from rest_framework import routers
 
-from .views import (
-    AddAvatarView,
-    UserrsViwset,
-)
-
-import djoser.views
-
+from .views import AddAvatarView, UserrsViwset
 
 router = routers.DefaultRouter()
 router.register('', UserrsViwset)

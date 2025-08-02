@@ -1,9 +1,8 @@
+import technol_parts_apps.constants as const
 from django.contrib.auth import get_user_model
 from django.db import models
-from .abstract_models import (
-    NameFieldModelBase,
-    )
-import technol_parts_apps.constants as const
+
+from .abstract_models import NameFieldModelBase
 
 User = get_user_model()
 

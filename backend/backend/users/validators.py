@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
-
 re_validator_username = RegexValidator(
     regex=r'^[\w.@+-]+\Z',
     message="Поле 'username' должно состоять только из букв, цифр "

@@ -1,8 +1,6 @@
+import technol_parts_apps.constants as const
 from django.contrib.auth import get_user_model
 from django.db import models
-
-import technol_parts_apps.constants as const
-
 
 User = get_user_model()
 
@@ -20,4 +18,3 @@ class NameFieldModelBase(models.Model):
 
     def __str__(self):
         return self.name[:const.LENGTH_TEXT]
-
