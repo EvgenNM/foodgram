@@ -180,7 +180,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
-
     @action(
         detail=False,
         url_path='download_shopping_cart',
