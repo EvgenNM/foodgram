@@ -337,11 +337,12 @@ class BaseFavoriteShoppingSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'image', 'name', 'cooking_time', )
 
     def validate(self, data):
-        recipe = get_object_or_404(Recipe, pk=self.context["pk"])
-        data['id'] = recipe.id
-        data['image'] = recipe.image
-        data['name'] = recipe.name
-        data['cooking_time'] = recipe.cooking_time
+        if self.context.get('pk'):
+            recipe = get_object_or_404(Recipe, pk=self.context["pk"])
+            data['id'] = recipe.id
+            data['image'] = recipe.image
+            data['name'] = recipe.name
+            data['cooking_time'] = recipe.cooking_time
         return data
 
 
@@ -349,12 +350,13 @@ class FavoriteSerializer(BaseFavoriteShoppingSerializer):
 
     def validate(self, data):
         data = super().validate(data)
-        user = self.context['request'].user
-        recipe = get_object_or_404(Recipe, pk=self.context["pk"])
-        if user.favourites.filter(recipe__exact=recipe).exists():
-            raise serializers.ValidationError(
-                'Вы уже добавили этот рецепт'
-            )
+        if self.context.get('pk'):
+            user = self.context['request'].user
+            recipe = get_object_or_404(Recipe, pk=self.context["pk"])
+            if user.favourites.filter(recipe__exact=recipe).exists():
+                raise serializers.ValidationError(
+                    'Вы уже добавили этот рецепт'
+                )
         return data
 
 
@@ -362,10 +364,11 @@ class ShoppingSerializer(BaseFavoriteShoppingSerializer):
 
     def validate(self, data):
         data = super().validate(data)
-        user = self.context['request'].user
-        recipe = get_object_or_404(Recipe, pk=self.context["pk"])
-        if Shopping.objects.filter(user=user, recipe=recipe).exists():
-            raise serializers.ValidationError(
-                'Вы уже добавили этот рецепт'
-            )
+        if self.context.get('pk'):
+            user = self.context['request'].user
+            recipe = get_object_or_404(Recipe, pk=self.context["pk"])
+            if Shopping.objects.filter(user=user, recipe=recipe).exists():
+                raise serializers.ValidationError(
+                    'Вы уже добавили этот рецепт'
+                )
         return data

@@ -18,9 +18,11 @@ from .serializers import (
     GetLinkSerializer,
     FavoriteSerializer,
     ShoppingSerializer,
+    BaseFavoriteShoppingSerializer,
 )
 from .permissions import IsAuthorAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponse
 
 
 class TagViewSet(
@@ -45,6 +47,42 @@ class Ingredient(
     pagination_class = None
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
+
+
+class FavoritesViewSet(
+    mixins.ListModelMixin,
+    # mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+):
+    permission_classes = (permissions.IsAuthenticated, )
+    serializer_class = FavoriteSerializer
+
+    def get_queryset(self):
+        queryset = Recipe.objects.filter(
+            id__in=[
+                obj.recipe.id
+                for obj in self.request.user.favourites.all()
+            ]
+        )
+        return queryset
+
+
+class CartViewSet(
+    mixins.ListModelMixin,
+    # mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
+):
+    permission_classes = (permissions.IsAuthenticated, )
+    serializer_class = BaseFavoriteShoppingSerializer
+
+    def get_queryset(self):
+        queryset = Recipe.objects.filter(
+            id__in=[
+                obj.recipe.id
+                for obj in self.request.user.shoppings.all()
+            ]
+        )
+        return queryset
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -98,7 +136,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return GetRecipeSerializer
 
     def get_permissions(self):
-        if self.action in ('doing_favorite', 'doing_shopping_cart', 'create'):
+        if self.action in ('doing_favorite', 'doing_shopping_cart', 'create', 'get_list_shopping_cart', 'get_list_favorite'):
             return (permissions.IsAuthenticated(), )
         if self.action in ('destroy', 'partial_update'):
             return (IsAuthorAuthenticated(), )
@@ -151,6 +189,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
+            detail=False,
+            url_path='favorites',
+            methods=['GET'],
+    )
+    def get_list_favorite(self, request):
+
+        queryset = Recipe.objects.filter(
+            id__in=[obj.recipe.id for obj in request.user.favourites.all()]
+        )
+        instances = FavoriteSerializer(queryset, many=True)
+        return Response(instances.data)
+
+    @action(
             detail=True,
             url_path='shopping_cart',
             methods=['POST', 'DELETE'],
@@ -185,6 +236,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
             detail=False,
+            url_path='cart',
+            methods=['GET'],
+    )
+    def get_list_shopping_cart(self, request):
+
+        queryset = Recipe.objects.filter(
+            id__in=[obj.recipe.id for obj in request.user.shoppings.all()]
+        )
+        instances = BaseFavoriteShoppingSerializer(queryset, many=True)
+        return Response(instances.data)
+
+    @action(
+            detail=False,
             url_path='download_shopping_cart',
             methods=['GET'],
     )
@@ -210,8 +274,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 ]
             )
 
-            # with open('shopping_cart.txt', 'w', encoding='utf-8') as carts:
-            #     print(response, file=carts)
-            #     return FileResponse(carts)
-
-            return Response(response)
+            filename = f"shopping_cart_{request.user.username}.txt"
+            content = response
+            response = HttpResponse(content, content_type='text/plain')
+            response['Content-Disposition'] = f'attachment; filename={filename}'
+            return response
+            # return Response(response)
