@@ -13,26 +13,23 @@ from .models import Favorite, Ingredient, Recipe, Shopping, Tag
 from .permissions import IsAuthorAuthenticated
 
 
-class TagViewSet(
+class BaseTagIngredientViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet
 ):
     permission_classes = (permissions.AllowAny,)
+    pagination_class = None
+
+
+class TagViewSet(BaseTagIngredientViewSet):
     queryset = Tag.objects.all()
     serializer_class = s.TagSerializers
-    pagination_class = None
 
 
-class Ingredient(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet
-):
-    permission_classes = (permissions.AllowAny,)
+class Ingredient(BaseTagIngredientViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = s.IngredientSerializers
-    pagination_class = None
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
 
@@ -49,8 +46,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart'
         )
+        filter_tags = []
         if self.request.query_params.get('tags'):
-            filter_tags = []
             for slug in self.request.query_params.getlist('tags'):
                 try:
                     objects = Tag.objects.get(slug=slug).tag_recipes.all()
@@ -58,13 +55,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         filter_tags += [obj.recipe.id]
                 except ObjectDoesNotExist:
                     pass
-            return Recipe.objects.filter(id__in=filter_tags)
+
         if is_favorited and is_favorited.isdigit() and self.request.auth:
-            filter_is_favorited = [
-                item.recipe.id for
-                item in self.request.user.favourites.all()[:int(is_favorited)]
-            ]
-            return Recipe.objects.filter(id__in=filter_is_favorited)
+            if filter_tags:
+                filter_is_favorited = [
+                    item.recipe.id
+                    for item in self.request.user.favourites.all()
+                    if item.recipe.id in filter_tags
+                ]
+            else:
+                filter_is_favorited = [
+                    item.recipe.id
+                    for item in self.request.user.favourites.all()
+                ]
+            return Recipe.objects.filter(
+                id__in=filter_is_favorited
+            )[:int(is_favorited)]
         if (
             is_in_shopping_cart
             and is_in_shopping_cart.isdigit()
@@ -72,12 +78,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ):
             filter_is_in_shopping_cart = [
                 item.recipe.id for
-                item in self.request.user.shoppings.all()[
-                    :int(is_in_shopping_cart)
-                ]
+                item in self.request.user.shoppings.all()
             ]
-            return Recipe.objects.filter(id__in=filter_is_in_shopping_cart)
+            return Recipe.objects.filter(
+                id__in=filter_is_in_shopping_cart
+            )[:int(is_in_shopping_cart)]
 
+        if filter_tags:
+            return Recipe.objects.filter(id__in=filter_tags)
         return Recipe.objects.all()
 
     def get_serializer_class(self):
@@ -196,13 +204,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             for ingrediets_values in user_recipes_shopping_cart:
                 for ingredient_value in ingrediets_values:
                     shopping_cart[
-                        ingredient_value.ingredient.name
+                        ingredient_value.ingredient
                     ] = shopping_cart.get(
-                        ingredient_value.ingredient.name, []
+                        ingredient_value.ingredient, []
                     ) + [ingredient_value.amount]
             response = '\n'.join(
                 [
-                    f'{key}: {sum(value)}'
+                    f'{key.name}: {sum(value)} {key.measurement_unit}'
                     for key, value in shopping_cart.items()
                 ]
             )
