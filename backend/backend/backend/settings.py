@@ -21,7 +21,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'KEY')
 DEBUG = os.getenv('DEBUG', '').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('HOSTS', '').split(', ')
-# Application definition
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -74,6 +74,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 
 DATABASES = {
