@@ -1,5 +1,6 @@
-import technol_parts_apps.models as md
 from django.contrib import admin
+
+import technol_parts_apps.models as md
 
 
 class RecipeIngredientInline(admin.StackedInline):

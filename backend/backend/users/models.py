@@ -1,7 +1,8 @@
-import users.constants as const
-import users.validators as vd
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+import users.constants as const
+import users.validators as vd
 
 
 class User(AbstractUser):
@@ -41,3 +42,6 @@ class User(AbstractUser):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('username',)
+
+    def __str__(self):
+        return self.username[:const.USERNAME_LENGTH_STR]

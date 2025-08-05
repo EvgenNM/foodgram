@@ -6,9 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from technol_parts_apps.models import Follow
 from technol_parts_apps.serializers import FollowSerializer
-
 from .serializers import AddAvatarSerializer, User
 
 

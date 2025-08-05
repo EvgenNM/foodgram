@@ -1,6 +1,7 @@
-import technol_parts_apps.views as vi
 from django.urls import include, path
 from rest_framework import routers
+
+import technol_parts_apps.views as vi
 
 router = routers.DefaultRouter()
 router.register('tags', vi.TagViewSet, basename='genres')

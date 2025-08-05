@@ -1,4 +1,3 @@
-import technol_parts_apps.serializers as s
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -9,6 +8,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
+import technol_parts_apps.serializers as s
 from .models import Favorite, Ingredient, Recipe, Shopping, Tag
 from .permissions import IsAuthorAuthenticated
 
@@ -46,28 +46,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart'
         )
-        filter_tags = []
+
         if self.request.query_params.get('tags'):
-            for slug in self.request.query_params.getlist('tags'):
-                try:
-                    objects = Tag.objects.get(slug=slug).tag_recipes.all()
-                    for obj in objects:
-                        filter_tags += [obj.recipe.id]
-                except ObjectDoesNotExist:
-                    pass
+            tags_obj = Tag.objects.filter(
+                slug__in=self.request.query_params.getlist('tags')
+            )
+            recipes_tags_queryset = Recipe.objects.filter(tags__in=tags_obj)
 
         if is_favorited and is_favorited.isdigit() and self.request.auth:
-            if filter_tags:
-                filter_is_favorited = [
-                    item.recipe.id
-                    for item in self.request.user.favourites.all()
-                    if item.recipe.id in filter_tags
-                ]
-            else:
-                filter_is_favorited = [
-                    item.recipe.id
-                    for item in self.request.user.favourites.all()
-                ]
+            filter_is_favorited = [
+                item.recipe.id
+                for item in self.request.user.favourites.all()
+            ]
+            if self.request.query_params.get('tags'):
+                return recipes_tags_queryset.filter(
+                    id__in=filter_is_favorited
+                )[:int(is_favorited)]
             return Recipe.objects.filter(
                 id__in=filter_is_favorited
             )[:int(is_favorited)]
@@ -84,8 +78,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 id__in=filter_is_in_shopping_cart
             )[:int(is_in_shopping_cart)]
 
-        if filter_tags:
-            return Recipe.objects.filter(id__in=filter_tags)
+        if self.request.query_params.get('tags'):
+            return recipes_tags_queryset
         return Recipe.objects.all()
 
     def get_serializer_class(self):

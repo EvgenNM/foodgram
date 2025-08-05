@@ -1,7 +1,8 @@
-import technol_parts_apps.constants as const
 from django.contrib.auth import get_user_model
 from django.db import models
 
+import technol_parts_apps.constants as const
+import technol_parts_apps.validators as vd
 from .abstract_models import NameFieldModelBase
 
 User = get_user_model()
@@ -11,14 +12,16 @@ class Recipe(NameFieldModelBase):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='recipes')
     image = models.ImageField(
-        upload_to='recipes/', null=True, blank=True)
+        upload_to='recipes/', null=True, blank=True
+    )
     pub_date = models.DateTimeField(
         verbose_name='Дата публикации',
         auto_now_add=True,
     )
     description = models.TextField()
-    cooking_time = models.PositiveIntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время готовки',
+        validators=vd.cooking_time_validators
     )
     ingredients = models.ManyToManyField(
         'Ingredient', through='RecipeIngredient', null=True, blank=True
@@ -68,6 +71,17 @@ class RecipeTag(models.Model):
         Recipe, on_delete=models.CASCADE, related_name='recipe_tags'
     )
 
+    class Meta:
+        verbose_name = 'Тег рецепта'
+        verbose_name_plural = 'Теги рецептов'
+        ordering = ('tag', )
+
+    def __str__(self):
+        return (
+            f'Тег {self.tag[:self.LENGTH_CONST]} '
+            f'рецепта {self.recipe[:self.LENGTH_CONST]}'
+        )
+
 
 class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
@@ -79,8 +93,9 @@ class RecipeIngredient(models.Model):
         Recipe, on_delete=models.CASCADE, related_name='recipes_ingredient',
         null=True, blank=True,
     )
-    amount = models.PositiveIntegerField(
+    amount = models.PositiveSmallIntegerField(
         verbose_name='Количественный показатель ингридиента',
+        validators=vd.amount_validators
     )
     date = models.DateTimeField(
         verbose_name='Дата изменения',
@@ -91,6 +106,7 @@ class RecipeIngredient(models.Model):
     class Meta:
         verbose_name = 'Количество ингридиентов'
         verbose_name_plural = 'Количество ингридиентов'
+        ordering = ('date', )
 
     def __str__(self):
         return (
@@ -110,6 +126,7 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        ordering = ('user', )
 
     def __str__(self):
         return (
@@ -128,6 +145,7 @@ class Favorite(models.Model):
     class Meta:
         verbose_name = 'Лист избранного'
         verbose_name_plural = 'Листы избранного'
+        ordering = ('user', )
 
     def __str__(self):
         return (
@@ -146,6 +164,7 @@ class Shopping(models.Model):
     class Meta:
         verbose_name = 'Лист покупок'
         verbose_name_plural = 'Листы покупок'
+        ordering = ('user', )
 
     def __str__(self):
         return (
