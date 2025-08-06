@@ -53,9 +53,8 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        id = representation.pop('id')
-        ingredient = md.Ingredient.objects.get(id=id)
-        ingredient_serializer = IngredientSerializers(instance=ingredient)
+        representation.pop('id')
+        ingredient_serializer = IngredientSerializers(instance=instance)
         representation.update(ingredient_serializer.data)
         representation['amount'] = instance.ingredient_recipes.last().amount
         return representation
