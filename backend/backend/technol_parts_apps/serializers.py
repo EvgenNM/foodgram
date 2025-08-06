@@ -53,11 +53,15 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        id = representation.pop('id')
+        ingredient = md.Ingredient.objects.get(id=id)
+        ingredient_serializer = IngredientSerializers(instance=ingredient)
+        representation.update(ingredient_serializer.data)
         representation['amount'] = instance.ingredient_recipes.last().amount
         return representation
 
 
-class CreateRecipeSerializer(serializers.ModelSerializer):
+class CreateUpdateRecipeSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     name = serializers.CharField(
         max_length=const.RECIPE_NAME_LENGTH,
@@ -112,11 +116,9 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         recipe = md.Recipe.objects.create(**validated_data)
-        tag_recipes_objects = [
-            md.RecipeTag(recipe=recipe, tag=tag)
-            for tag in tags
-        ]
-        md.RecipeTag.objects.bulk_create(tag_recipes_objects)
+        md.RecipeTag.objects.bulk_create(
+            self.tags_recipes_objects(tags, recipe)
+        )
         recipe_ingredient_objects = [
             md.RecipeIngredient(
                 ingredient=values['id'],
@@ -138,12 +140,11 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         instance.save()
-        for tag in tags:
-            md.RecipeTag.objects.get_or_create(recipe=instance, tag=tag)
+        instance.tags.set(tags)
         for values in ingredients:
             ingredient, *_ = md.RecipeIngredient.objects.get_or_create(
                 ingredient=values['id'],
-                recipe=instance
+                recipe=instance,
             )
             ingredient.amount = values['amount']
             ingredient.save()
@@ -155,11 +156,9 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         recipe = int(representation['id'])
 
         tags = representation.pop('tags')
-        tags_objects = []
-        for tag in tags:
-            tag_object = TagSerializers(md.Tag.objects.get(pk=tag))
-            tags_objects += [tag_object.data]
-        representation['tags'] = tags_objects
+        tags_objects = md.Tag.objects.filter(id__in=tags)
+        tags_objects_serializer = TagSerializers(tags_objects, many=True)
+        representation['tags'] = tags_objects_serializer.data
 
         author = RetrieveUserSerializer(instance=user)
         representation['author'] = author.data
@@ -169,12 +168,6 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         representation['is_in_shopping_cart'] = self.already(
             user, recipe, md.Shopping
         )
-        for items in representation['ingredients']:
-            pk = items.pop('id')
-            ingredient = IngredientSerializers(
-                instance=md.Ingredient.objects.get(id=pk)
-            )
-            items.update(ingredient.data)
         return representation
 
     def exam_duplicate(self, collection, f_string):
@@ -186,9 +179,12 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     def already(self, user, recipe, model):
         return model.objects.filter(user=user, recipe=recipe).exists()
 
-
-class UpdateRecipeSerializer(CreateRecipeSerializer):
-    pass
+    def tags_recipes_objects(self, list_tags, recipe):
+        tag_recipes_objects = [
+            md.RecipeTag(recipe=recipe, tag=tag)
+            for tag in list_tags
+        ]
+        return tag_recipes_objects
 
 
 class GetRecipeSerializer(serializers.ModelSerializer):
