@@ -322,15 +322,14 @@ class BaseFavoriteShoppingSerializer(serializers.ModelSerializer):
         model = md.Recipe
         fields = ['id', 'image', 'name', 'cooking_time']
         read_only_fields = ('id', 'image', 'name', 'cooking_time', )
-
-    def validate(self, data):
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
         if self.context.get('pk'):
             recipe = get_object_or_404(md.Recipe, pk=self.context["pk"])
-            data['id'] = recipe.id
-            data['image'] = recipe.image
-            data['name'] = recipe.name
-            data['cooking_time'] = recipe.cooking_time
-        return data
+            recipe_serializer = RecipeForListFollowSerializer(recipe)
+            representation.update(recipe_serializer.data)
+        return representation
 
 
 class FavoriteSerializer(BaseFavoriteShoppingSerializer):
