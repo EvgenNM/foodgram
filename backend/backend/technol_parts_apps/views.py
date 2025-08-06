@@ -85,8 +85,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update'):
             return s.CreateUpdateRecipeSerializer
-        # if self.action == 'partial_update':
-        #     return s.CreateUpdateRecipeSerializer
         return s.GetRecipeSerializer
 
     def get_permissions(self):

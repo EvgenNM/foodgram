@@ -316,13 +316,8 @@ class FollowSerializer(serializers.ModelSerializer):
         return representation
 
 
-class BaseFavoriteShoppingSerializer(serializers.ModelSerializer):
+class BaseFavoriteShoppingSerializer(serializers.Serializer):
 
-    class Meta:
-        model = md.Recipe
-        fields = ['id', 'image', 'name', 'cooking_time']
-        read_only_fields = ('id', 'image', 'name', 'cooking_time', )
-    
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if self.context.get('pk'):
