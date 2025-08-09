@@ -78,8 +78,8 @@ class RecipeTag(models.Model):
 
     def __str__(self):
         return (
-            f'Тег {self.tag[:self.LENGTH_CONST]} '
-            f'рецепта {self.recipe[:self.LENGTH_CONST]}'
+            f'Тег {self.tag} '
+            f'рецепта {self.recipe}'
         )
 
 

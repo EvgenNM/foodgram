@@ -37,7 +37,6 @@ class Ingredient(BaseTagIngredientViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     """Создание манипуляционного инструмента для рецепта"""
     http_method_names = ['post', 'get', 'patch', 'delete']
-    pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author', )
 
@@ -46,6 +45,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart'
         )
+        limit = self.request.query_params.get('limit')
 
         if self.request.query_params.get('tags'):
             tags_obj = Tag.objects.filter(
@@ -77,6 +77,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Recipe.objects.filter(
                 id__in=filter_is_in_shopping_cart
             )[:int(is_in_shopping_cart)]
+
+        if limit and limit.isdigit():
+            if self.request.query_params.get('tags'):
+                return recipes_tags_queryset[:int(limit)]
+            return Recipe.objects.all()[:int(limit)]
 
         if self.request.query_params.get('tags'):
             return recipes_tags_queryset
