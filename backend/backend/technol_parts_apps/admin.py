@@ -49,7 +49,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(md.Ingredient)
-class RecipeAdmin(admin.ModelAdmin):
+class IngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'measurement_unit')
     search_fields = ('name',)
 
