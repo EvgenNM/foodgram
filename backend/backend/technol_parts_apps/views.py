@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
@@ -40,6 +40,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author', )
 
+    def get_page_count(self, limit):
+        class PageNumberLimitPagination(PageNumberPagination):
+            page_size = int(limit)
+
+        self.pagination_class = PageNumberLimitPagination
+
     def get_queryset(self):
         is_favorited = self.request.query_params.get('is_favorited')
         is_in_shopping_cart = self.request.query_params.get(
@@ -51,7 +57,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             tags_obj = Tag.objects.filter(
                 slug__in=self.request.query_params.getlist('tags')
             )
-            recipes_tags_queryset = Recipe.objects.filter(tags__in=tags_obj)
+            recipes_tags_queryset = Recipe.objects.filter(
+                tags__in=tags_obj
+            ).distinct()
 
         if is_favorited and is_favorited.isdigit() and self.request.auth:
             filter_is_favorited = [
@@ -79,9 +87,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )[:int(is_in_shopping_cart)]
 
         if limit and limit.isdigit():
-            if self.request.query_params.get('tags'):
-                return recipes_tags_queryset[:int(limit)]
-            return Recipe.objects.all()[:int(limit)]
+            self.get_page_count(limit)
 
         if self.request.query_params.get('tags'):
             return recipes_tags_queryset
